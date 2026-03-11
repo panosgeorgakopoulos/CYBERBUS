@@ -1,0 +1,16 @@
+{
+  "name": "CYBERBUS System",
+  "short_name": "Cyberbus",
+  "description": "Smart Bus HCI Project",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3204/3204085.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

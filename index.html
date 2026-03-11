@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="el">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBERBUS PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden text-slate-800 dark:bg-slate-900 dark:text-slate-200 relative transition-colors duration-300">
+
+    <div id="login-screen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-4">
+        <div class="glass-panel p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center text-white relative overflow-hidden">
+            <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/50 relative z-10">
+                <i class="fa-solid fa-bus text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-1 relative z-10">CYBERBUS</h1>
+            <p class="text-slate-300 text-xs mb-8 relative z-10">Edition v14 (Native Video Engine)</p>
+
+            <div id="login-main" class="space-y-3 relative z-10">
+                <button onclick="app.login('passenger')" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl hover:bg-slate-100 transition flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-suitcase-rolling text-blue-600"></i> <span data-i18n="Είσοδος Επιβάτη">Είσοδος Επιβάτη</span>
+                </button>
+                <button onclick="app.showPinPad()" class="w-full bg-slate-700/50 border border-slate-500 text-white font-bold py-3 rounded-xl hover:bg-slate-700 transition flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-id-card"></i> <span data-i18n="Είσοδος Προσωπικού">Είσοδος Προσωπικού</span>
+                </button>
+            </div>
+
+            <div id="login-pin" class="hidden relative z-10">
+                <p class="text-sm mb-4" data-i18n="Εισάγετε Κωδικό (12345)">Εισάγετε Κωδικό (12345)</p>
+                <div class="flex justify-center gap-2 mb-6">
+                    <input type="password" id="pin-input" readonly class="w-32 bg-slate-800/50 border border-slate-600 rounded text-center text-2xl tracking-widest py-2 focus:outline-none text-white placeholder-slate-600" placeholder="•••••">
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <button onclick="app.addPin('1')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">1</button>
+                    <button onclick="app.addPin('2')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">2</button>
+                    <button onclick="app.addPin('3')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">3</button>
+                    <button onclick="app.addPin('4')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">4</button>
+                    <button onclick="app.addPin('5')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">5</button>
+                    <button onclick="app.addPin('6')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">6</button>
+                    <button onclick="app.addPin('7')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">7</button>
+                    <button onclick="app.addPin('8')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">8</button>
+                    <button onclick="app.addPin('9')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">9</button>
+                    <button onclick="app.clearPin()" class="bg-red-500/20 text-red-200 p-3 rounded-lg hover:bg-red-500/40 transition"><i class="fa-solid fa-delete-left"></i></button>
+                    <button onclick="app.addPin('0')" class="bg-white/10 p-3 rounded-lg font-bold text-lg hover:bg-white/20 transition">0</button>
+                    <button onclick="app.submitPin()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-500 transition"><i class="fa-solid fa-check"></i></button>
+                </div>
+                <button onclick="app.hidePinPad()" class="text-xs text-slate-400 hover:text-white underline" data-i18n="Ακύρωση">Ακύρωση</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content" class="h-full flex flex-col hidden relative z-0">
+        
+        <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex flex-col gap-2 shadow-sm z-30 shrink-0">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-blue-200 shadow-lg"><i class="fa-solid fa-bus text-sm"></i></div>
+                    <div>
+                        <h1 class="text-sm font-bold dark:text-white leading-tight">CYBERBUS</h1>
+                        <p id="user-role-display" class="text-[10px] font-bold text-blue-600 uppercase">GUEST</p>
+                    </div>
+                </div>
+                <div class="text-right flex items-center gap-2">
+                    <div id="bus-speed-display" class="hidden md:block text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">50 km/h</div>
+                    <div id="live-clock" class="font-mono text-sm font-bold text-slate-700 dark:text-slate-300 mr-2">00:00</div>
+                    <button onclick="app.toggleLang()" id="lang-btn" class="text-xs bg-slate-100 dark:bg-slate-700 p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 font-bold transition">🇬🇷 GR</button>
+                    <button onclick="app.toggleTheme()" class="text-xs bg-slate-100 dark:bg-slate-700 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 text-amber-500 transition"><i class="fa-solid fa-moon" id="theme-icon"></i></button>
+                    <button onclick="app.showHelp()" class="text-xs bg-slate-100 dark:bg-slate-700 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 text-blue-500 transition"><i class="fa-solid fa-question"></i></button>
+                    <button onclick="location.reload()" class="text-xs text-red-500 hover:text-red-700"><i class="fa-solid fa-power-off"></i></button>
+                </div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600 p-2 flex items-center justify-between overflow-hidden relative h-12">
+                <div class="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-600 -z-0"></div>
+                <div id="route-visualizer" class="w-full flex justify-between items-center z-10 px-2"></div>
+            </div>
+        </header>
+
+        <nav id="nav-passenger" class="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex shrink-0 z-20 hidden">
+            <button onclick="app.switchTab('cafe')" id="tab-cafe" class="tab-btn active flex-1 py-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-utensils"></i> <span data-i18n="Delivery">Delivery</span></button>
+            <button onclick="app.switchTab('tour')" id="tab-tour" class="tab-btn flex-1 py-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-eye"></i> <span data-i18n="Θέα & Πλοήγηση">Θέα & Πλοήγηση</span></button>
+            <button onclick="app.switchTab('ai')" id="tab-ai" class="tab-btn flex-1 py-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-purple-600 flex items-center justify-center gap-2 text-sm relative"><i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> <span data-i18n="Gemini Assistant">Gemini Assistant</span></button>
+            <button onclick="app.passengerToggleAC()" id="tab-p-ac" class="tab-btn flex-1 py-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-fan" id="p-ac-icon"></i> <span data-i18n="Κλιματισμός">Κλιματισμός</span></button>
+        </nav>
+
+        <nav id="nav-driver" class="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex shrink-0 z-20 hidden">
+            <button onclick="app.switchTab('systems')" id="tab-systems" class="tab-btn active flex-1 py-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-gauge-high"></i> <span data-i18n="Συστήματα & HVAC">Συστήματα & HVAC</span></button>
+            <button onclick="app.switchTab('vacuum')" id="tab-vacuum" class="tab-btn flex-1 py-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 flex items-center justify-center gap-2 text-sm"><i class="fa-solid fa-robot"></i> <span data-i18n="Καθαρισμός">Καθαρισμός</span></button>
+        </nav>
+
+        <main class="flex-1 overflow-hidden relative bg-slate-50 dark:bg-slate-900">
+
+            <div id="stop-overlay" class="absolute inset-0 bg-black/80 z-[60] hidden flex flex-col items-center justify-center text-white text-center p-4">
+                <i class="fa-solid fa-door-open text-6xl mb-4 animate-bounce text-yellow-400"></i>
+                <h2 class="text-3xl font-bold mb-2" data-i18n="ΕΠΟΜΕΝΗ ΣΤΑΣΗ">ΕΠΟΜΕΝΗ ΣΤΑΣΗ</h2>
+            </div>
+
+            <section id="view-cafe" class="h-full flex flex-col md:flex-row overflow-hidden relative hidden">
+                <div class="flex-1 flex flex-col overflow-hidden h-full relative">
+                    <div class="p-4 pb-2 shrink-0">
+                        <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar" id="filters-container">
+                            <button onclick="app.filterShops('all')" class="filter-btn active-filter bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🍔 <span data-i18n="Όλα">Όλα</span></button>
+                            <button onclick="app.filterShops('Καφές')" class="filter-btn bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">☕ <span data-i18n="Καφές">Καφές</span></button>
+                            <button onclick="app.filterShops('Street Food')" class="filter-btn bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🍕 <span data-i18n="Φαγητό">Φαγητό</span></button>
+                            <button onclick="app.filterShops('Γλυκά')" class="filter-btn bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🍦 <span data-i18n="Γλυκά">Γλυκά</span></button>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 pt-0">
+                        <div id="shops-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20"></div>
+                    </div>
+
+                    <div id="menu-view" class="absolute inset-0 bg-white dark:bg-slate-900 z-20 hidden flex flex-col transform transition-transform duration-300 translate-x-0">
+                        <div class="h-32 bg-slate-800 relative shrink-0 overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                            <button onclick="app.closeMenu()" class="absolute top-4 left-4 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white w-8 h-8 rounded-full flex items-center justify-center transition"><i class="fa-solid fa-arrow-left"></i></button>
+                            <div class="absolute bottom-4 left-4 text-white">
+                                <h2 id="menu-title" class="text-2xl font-bold">Shop</h2>
+                                <p id="menu-subtitle" class="text-xs opacity-90">Category</p>
+                            </div>
+                        </div>
+                        <div id="menu-items-grid" class="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900 space-y-3 pb-24"></div>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 shadow-xl z-30 flex flex-col h-1/3 md:h-full relative shrink-0">
+                    <div class="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800">
+                        <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2"><i id="cart-icon" class="fa-solid fa-basket-shopping text-blue-600"></i> <span data-i18n="Καλάθι">Καλάθι</span></h3><span id="cart-count" class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-0.5 rounded">0</span>
+                    </div>
+                    <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-slate-800">
+                        <div class="text-center text-slate-300 dark:text-slate-500 text-sm mt-10" data-i18n="Το καλάθι είναι άδειο">Το καλάθι είναι άδειο</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                        <div class="flex justify-between items-center mb-1 hidden" id="discount-row">
+                            <span class="text-sm font-bold text-emerald-500 flex items-center gap-1"><i class="fa-solid fa-tag"></i> <span data-i18n="Έκπτωση -10%">Έκπτωση -10%</span></span>
+                            <span id="discount-amount" class="text-sm font-bold text-emerald-500">-0.00€</span>
+                        </div>
+                        <div class="flex justify-between items-end mb-4">
+                            <span class="text-sm text-slate-500 dark:text-slate-400" data-i18n="Σύνολο">Σύνολο</span>
+                            <div class="text-right">
+                                <div id="original-total" class="text-xs text-slate-400 line-through hidden mb-[-4px]">0.00€</div>
+                                <span id="cart-total" class="text-xl font-bold text-slate-800 dark:text-white">0.00€</span>
+                            </div>
+                        </div>
+                        <button onclick="app.initiateCheckout()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition" data-i18n="Ολοκλήρωση">Ολοκλήρωση</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-tour" class="h-full hidden flex flex-col overflow-hidden relative p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                    
+                    <div class="bg-black rounded-2xl overflow-hidden shadow-lg relative flex flex-col h-64 md:h-auto z-10">
+                        
+                        <div class="absolute top-4 left-4 z-30 flex gap-2">
+                            <button onclick="app.toggleCameraMode('dashcam')" id="btn-mode-dashcam" class="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg animate-pulse ring-2 ring-red-400"><i class="fa-solid fa-video"></i> DASHCAM</button>
+                            <button onclick="app.toggleCameraMode('ar')" id="btn-mode-ar" class="bg-slate-800/80 backdrop-blur text-slate-300 hover:text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg border border-slate-600 transition"><i class="fa-solid fa-vr-cardboard"></i> AR LENS</button>
+                        </div>
+                        
+                        <div id="dashcam-container" class="absolute inset-0 z-0 bg-black pointer-events-none">
+                            <iframe id="dashcam-video" class="w-full h-full" style="border:none;" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+                        </div>
+
+                        <div id="ar-camera-container" class="absolute inset-0 z-10 bg-slate-900 flex items-center justify-center hidden">
+                            <video id="live-camera-feed" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline></video>
+                            
+                            <div id="camera-placeholder" class="text-slate-400 flex flex-col items-center z-10 relative">
+                                <i class="fa-solid fa-camera-retro text-4xl mb-2"></i>
+                                <span class="text-xs font-bold" data-i18n="Κάμερα Ανενεργή">Κάμερα Ανενεργή</span>
+                                <button onclick="app.initCamera()" class="mt-4 text-sm bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl font-bold transition flex items-center gap-2 shadow-lg shadow-blue-500/50">
+                                    <i class="fa-solid fa-power-off"></i> <span data-i18n="Ενεργοποίηση AR">Ενεργοποίηση AR</span>
+                                </button>
+                            </div>
+                            
+                            <canvas id="ar-canvas" class="hidden"></canvas>
+                            
+                            <div id="ar-scanner-overlay" class="absolute inset-0 bg-slate-900/60 z-20 hidden">
+                                <div class="scanner-beam"></div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="border-2 border-emerald-400/50 w-48 h-48 rounded-3xl animate-pulse flex flex-col items-center justify-center relative">
+                                        <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-emerald-400"></div>
+                                        <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-emerald-400"></div>
+                                        <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-emerald-400"></div>
+                                        <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-emerald-400"></div>
+                                        <i class="fa-solid fa-brain text-emerald-400 text-3xl mb-2"></i>
+                                        <span class="text-emerald-400 font-mono text-[10px] text-center" data-i18n="Ανάλυση μέσω AI...">Ανάλυση μέσω AI...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="ar-result-overlay" class="absolute inset-0 bg-transparent z-30 hidden flex items-center justify-center p-4">
+                                <div class="bg-slate-800/80 backdrop-blur-md border border-blue-500/50 p-4 rounded-2xl text-white text-center animate-pop w-full max-w-[250px] shadow-2xl shadow-blue-900/50">
+                                    <i id="ar-res-icon" class="fa-solid fa-cube text-3xl text-blue-400 mb-2 animate-bounce"></i>
+                                    <h4 id="ar-title" class="font-bold mb-1 text-sm text-blue-100">...</h4>
+                                    <p id="ar-desc" class="text-[10px] text-slate-300 mb-4 leading-tight">...</p>
+                                    <button onclick="app.closeAR()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full text-xs font-bold transition w-full shadow-lg" data-i18n="Κλείσιμο AR">Επιστροφή</button>
+                                </div>
+                            </div>
+
+                            <button onclick="app.startARScan()" id="btn-ar-scan" class="absolute bottom-4 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-full text-sm font-bold transition z-20 shadow-lg shadow-emerald-600/50 flex items-center gap-2 group hidden">
+                                <i class="fa-solid fa-expand group-hover:scale-110 transition"></i> <span data-i18n="AR Σάρωση">Ανάλυση Εικόνας</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-4 overflow-y-auto pb-4">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 relative flex flex-col justify-center items-start shrink-0">
+                            <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fa-solid fa-map-location-dot text-9xl text-blue-600"></i></div>
+                            <span class="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-2 py-1 rounded mb-3" data-i18n="ΕΠΟΜΕΝΗ ΣΤΑΣΗ">ΕΠΟΜΕΝΗ ΣΤΑΣΗ</span>
+                            <h2 id="landmark-name" class="text-3xl font-black text-slate-800 dark:text-white mb-2">...</h2>
+                            <p id="landmark-desc" class="text-slate-600 dark:text-slate-400 leading-relaxed text-sm mb-6 max-w-sm">...</p>
+                            
+                            <div class="flex gap-2 w-full">
+                                <button onclick="app.speakLandmark()" class="flex-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-3 rounded-xl text-sm font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-volume-high"></i> <span data-i18n="Ανάγνωση">Ανάγνωση</span>
+                                </button>
+                                <button onclick="app.activateWalkingMode()" class="flex-[2] bg-slate-900 dark:bg-slate-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition shadow-lg flex items-center justify-center gap-3">
+                                    <i class="fa-solid fa-map"></i> <span data-i18n="Διαδραστικός Χάρτης">Διαδραστικός Χάρτης</span>
+                                </button>
+                            </div>
+
+                            <div id="quiz-trigger-container" class="mt-4 hidden w-full">
+                                <button onclick="app.openQuizModal()" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition flex justify-center items-center gap-2 animate-pulse">
+                                    <i class="fa-solid fa-gift"></i> <span data-i18n="Παίξε & Κέρδισε Έκπτωση!">Παίξε & Κέρδισε Έκπτωση!</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-ai" class="h-full hidden flex flex-col overflow-hidden relative bg-white dark:bg-slate-900">
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white flex justify-between items-center shrink-0">
+                    <div><h2 class="font-bold flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> Gemini Assistant</h2></div>
+                </div>
+                <div id="chat-history" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-slate-50 dark:bg-slate-800"></div>
+                <div class="p-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-2">
+                    <button onclick="app.startVoiceRecognition()" class="bg-slate-100 dark:bg-slate-800 text-purple-600 dark:text-purple-400 w-12 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center"><i class="fa-solid fa-microphone"></i></button>
+                    <input type="text" id="chat-input" placeholder="..." class="flex-1 bg-slate-100 dark:bg-slate-800 dark:text-white border-0 rounded-xl px-4 py-3 text-sm outline-none" onkeypress="if(event.key==='Enter') app.sendChatMessage()">
+                    <button onclick="app.sendChatMessage()" class="bg-purple-600 text-white w-12 rounded-xl hover:bg-purple-700 flex items-center justify-center"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </section>
+
+            <section id="view-systems" class="h-full hidden flex flex-col p-4 gap-4 overflow-y-auto">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-bold text-slate-800 dark:text-white" data-i18n="Κέντρο Ελέγχου Λεωφορείου">Κέντρο Ελέγχου</h2>
+                    <button onclick="app.toggleBusStop()" id="btn-master-stop" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg animate-pulse flex items-center gap-2 border-2 border-red-500">
+                        <i class="fa-solid fa-hand"></i> STOP
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="dash-card dark:bg-slate-800 dark:border-slate-700 border-l-4 border-l-emerald-500 relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-4">
+                            <div><h3 class="font-bold text-slate-700 dark:text-white" data-i18n="Βοηθός Οδήγησης">Βοηθός Οδήγησης</h3></div>
+                            <i class="fa-solid fa-shield-halved text-2xl text-emerald-500" id="safety-icon"></i>
+                        </div>
+                        <div class="space-y-3 relative z-10">
+                            <div class="flex justify-between items-center text-sm bg-slate-50 dark:bg-slate-700 p-2 rounded">
+                                <span class="dark:text-white">Lane Assist</span> <span id="lane-status" class="text-emerald-600 font-bold"><i class="fa-solid fa-check"></i> ACTIVE</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm bg-slate-50 dark:bg-slate-700 p-2 rounded">
+                                <span class="dark:text-white" data-i18n="Όριο Ταχύτητας">Όριο Ταχύτητας</span> <span id="limit-val" class="font-mono font-bold dark:text-white">50 km/h</span>
+                            </div>
+                            <div id="driver-alert-box" class="bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-xs text-center text-slate-500 dark:text-slate-300 font-bold transition-colors">
+                                <i class="fa-solid fa-face-smile text-lg mb-1 block"></i> <span data-i18n="Κατάσταση Οδηγού: Κανονική">Κατάσταση Οδηγού: Κανονική</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dash-card dark:bg-slate-800 dark:border-slate-700 relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-2">
+                            <div><h3 class="font-bold text-slate-700 dark:text-white" data-i18n="Έξυπνος Κλιματισμός">Έξυπνος Κλιματισμός</h3></div>
+                            <i id="fan-icon" class="fa-solid fa-fan text-2xl text-blue-400 fa-spin"></i>
+                        </div>
+                        <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-700 p-2 rounded-lg mb-3 mt-4">
+                            <button onclick="app.driverUtils.adjustTemp(-1)" class="w-10 h-10 bg-white dark:bg-slate-600 rounded shadow text-blue-500 dark:text-blue-300 text-lg font-bold">-</button>
+                            <span id="target-temp" class="text-2xl font-bold text-slate-700 dark:text-white">24°C</span>
+                            <button onclick="app.driverUtils.adjustTemp(1)" class="w-10 h-10 bg-white dark:bg-slate-600 rounded shadow text-red-500 dark:text-red-300 text-lg font-bold">+</button>
+                        </div>
+                        <button onclick="app.driverUtils.toggleHVAC()" id="btn-hvac-power" class="w-full py-2 bg-blue-600 text-white border border-blue-600 text-xs font-bold rounded shadow-sm hover:bg-blue-700 transition flex justify-between px-3 items-center">
+                            <span><i class="fa-solid fa-power-off"></i> <span data-i18n="ΣΥΣΤΗΜΑ ON/OFF">ΣΥΣΤΗΜΑ ON/OFF</span></span>
+                            <span id="hvac-status">ON</span>
+                        </button>
+                    </div>
+
+                    <div class="dash-card bg-slate-900 text-white border-0">
+                        <div class="flex justify-between items-start mb-4">
+                            <div><h3 class="font-bold" data-i18n="Ενέργεια & Οροφή">Ενέργεια & Οροφή</h3></div>
+                            <i class="fa-solid fa-solar-panel text-2xl text-yellow-400"></i>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="text-center p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                                <div class="text-[9px] text-slate-300 uppercase" data-i18n="Καταναλωση Τωρα">Καταναλωση</div>
+                                <div id="pv-cons" class="text-lg font-mono font-bold text-red-300">9 kW</div>
+                            </div>
+                            <div class="text-center p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                                <div class="text-[9px] text-slate-300 uppercase" data-i18n="Παραγωγη PV">Παραγωγη PV</div>
+                                <div id="pv-prod" class="text-lg font-mono font-bold text-emerald-300">12.4 kW</div>
+                            </div>
+                        </div>
+                        <button onclick="app.driverUtils.toggleRoof()" id="btn-roof" class="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-arrow-up-from-bracket"></i> <span data-i18n="ΑΝΟΙΓΜΑ ΟΡΟΦΗΣ">ΑΝΟΙΓΜΑ ΟΡΟΦΗΣ</span>
+                        </button>
+                    </div>
+
+                    <div class="dash-card bg-slate-950 border-0 col-span-1 md:col-span-2 lg:col-span-3 h-48 flex flex-col p-0 overflow-hidden relative shadow-inner">
+                        <div class="bg-slate-900 p-2 border-b border-slate-800 shrink-0 flex justify-between items-center">
+                            <h3 class="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-terminal text-blue-500"></i> Event Log / Telemetry</h3>
+                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        </div>
+                        <div id="driver-log-content" class="flex-1 overflow-y-auto font-mono text-[10px] md:text-xs text-slate-300 p-3 space-y-1 bg-black"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-vacuum" class="h-full hidden flex flex-col p-4 gap-4 overflow-hidden relative">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1" data-i18n="Κατάσταση">Κατασταση</div>
+                        <div id="vac-status-text" class="text-base font-bold text-slate-700 dark:text-white truncate" data-i18n="Αναμονή">💤 Αναμονή</div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1" data-i18n="Χρόνος">Χρονος</div>
+                        <div class="flex items-center gap-2"><i class="fa-regular fa-clock text-blue-500"></i><span id="timer-text" class="text-lg font-bold text-slate-800 dark:text-white font-mono">--:--</span></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden group">
+                        <div class="flex justify-between items-center mb-1">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider" data-i18n="Κάδος">Καδος</div><span id="bin-text" class="text-xs font-bold text-orange-600">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2"><div id="bin-bar" class="bg-orange-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1" data-i18n="Μπαταρία">Μπαταρια</div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2"><div id="battery-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 100%"></div></div><span id="battery-text" class="text-xs font-bold text-emerald-600">100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden">
+                    <div class="flex-1 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden flex flex-col">
+                        <div class="p-3 border-b border-slate-50 dark:border-slate-700 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700 dark:text-white text-sm flex items-center gap-2"><i class="fa-solid fa-map text-slate-400"></i> <span data-i18n="Κάτοψη Λεωφορείου">Κάτοψη</span></h3>
+                        </div>
+                        <div class="flex-1 relative bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-center p-4">
+                            <div class="w-full max-w-sm h-[300px] border-4 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-[40px] relative flex flex-col shadow-xl overflow-hidden">
+                                <div class="h-14 bg-slate-100 dark:bg-slate-700 border-b-2 border-slate-200 dark:border-slate-600 flex items-center justify-center"><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 shadow-sm">Cockpit</span></div>
+                                <div class="flex-1 flex relative bg-slate-50 dark:bg-slate-800">
+                                    <div onclick="app.toggleZone('left')" id="zone-left" class="flex-1 border-r border-dashed border-slate-200 dark:border-slate-600 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-700 transition duration-200 group relative overflow-hidden">
+                                        <i class="fa-solid fa-couch text-2xl text-slate-300 group-hover:text-blue-300 z-10"></i><span class="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 z-10" data-i18n="Αριστερά">Αριστερά (15s)</span>
+                                    </div>
+                                    <div onclick="app.toggleZone('aisle')" id="zone-aisle" class="w-16 bg-white dark:bg-slate-700 border-r border-dashed border-slate-200 dark:border-slate-600 flex items-center justify-center cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-600 transition duration-200 relative">
+                                        <span class="rotate-90 text-[10px] font-bold text-slate-300 tracking-[0.2em] whitespace-nowrap group-hover:text-blue-600 z-10" data-i18n="Διάδρομος">ΔΙΑΔΡΟΜΟΣ (10s)</span>
+                                    </div>
+                                    <div onclick="app.toggleZone('right')" id="zone-right" class="flex-1 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-700 transition duration-200 group relative overflow-hidden">
+                                        <i class="fa-solid fa-couch text-2xl text-slate-300 group-hover:text-blue-300 z-10"></i><span class="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 z-10" data-i18n="Δεξιά">Δεξιά (15s)</span>
+                                    </div>
+                                    <div id="robot-unit" class="absolute w-12 h-12 bg-slate-800 rounded-full border-2 border-emerald-400 shadow-2xl flex items-center justify-center text-white z-20 hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-in-out"><i class="fa-solid fa-robot fa-spin text-sm"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full lg:w-80 flex flex-col gap-4">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 border border-slate-100 dark:border-slate-700">
+                            <h3 class="font-bold text-slate-700 dark:text-white mb-3 text-sm" data-i18n="Πίνακας Ελέγχου">Πίνακας Ελέγχου</h3>
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <button onclick="app.startCleaning()" id="btn-start" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow-emerald-100 shadow-lg flex items-center justify-center gap-2 transition text-sm"><i class="fa-solid fa-play"></i> Start</button>
+                                <button onclick="app.stopCleaning()" id="btn-stop" class="bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition cursor-not-allowed text-sm" disabled><i class="fa-solid fa-stop"></i> Stop</button>
+                            </div>
+                            <button onclick="app.manualEmptyBin()" id="btn-empty" class="w-full bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-800 font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition text-xs mb-2"><i class="fa-solid fa-trash-can-arrow-up"></i> <span data-i18n="Χειροκίνητο Άδειασμα">Χειροκίνητο</span></button>
+                            <button onclick="app.simulateObjectFound()" class="w-full bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition text-xs"><i class="fa-solid fa-gem"></i> <span data-i18n="Sim: Εύρεση Αντικειμένου">Sim Object</span></button>
+                        </div>
+                        <div class="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col overflow-hidden min-h-[150px]">
+                            <div class="p-3 border-b border-slate-50 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-700 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-box-open text-purple-500"></i> Lost & Found</h3><span id="found-badge" class="bg-purple-500 text-white text-[10px] font-bold px-1.5 rounded-full">0</span>
+                            </div>
+                            <div id="found-items-list" class="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50/50 dark:bg-slate-900/50"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="seat-modal" class="fixed inset-0 bg-slate-900/80 z-[130] hidden flex items-center justify-center backdrop-blur-md p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden animate-pop">
+                <div class="bg-blue-600 p-6 text-white text-center">
+                    <h2 class="text-xl font-bold" data-i18n="Επιλογή Θέσης">Επιλογή Θέσης</h2>
+                    <p class="text-xs text-blue-100 mt-1" data-i18n="Επιλέξτε πού κάθεστε">Επιλέξτε πού κάθεστε στο λεωφορείο</p>
+                </div>
+                <div class="p-6">
+                    <div class="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl mb-6">
+                        <div class="w-full h-8 bg-slate-300 dark:bg-slate-700 rounded-t-3xl mb-4 flex items-center justify-center text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">COCKPIT</div>
+                        <div class="grid grid-cols-5 gap-3" id="seat-grid"></div>
+                    </div>
+                    <button onclick="app.confirmSeat()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition" id="btn-confirm-seat" disabled data-i18n="Επιβεβαίωση">Επιβεβαίωση</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="quiz-modal" class="fixed inset-0 bg-slate-900/80 z-[120] hidden flex items-center justify-center backdrop-blur-md p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-sm w-full relative overflow-hidden text-center animate-pop border border-blue-200 dark:border-blue-900">
+                <div class="bg-blue-600 p-6 text-white relative">
+                    <button onclick="document.getElementById('quiz-modal').classList.add('hidden')" class="absolute top-4 right-4 text-white/70 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                    <i class="fa-solid fa-gift text-4xl mb-2 animate-bounce"></i>
+                    <h2 class="text-xl font-bold">Pop Quiz!</h2>
+                    <p id="quiz-sub" class="text-xs text-blue-100 mt-1">Απαντήστε σωστά & κερδίστε -10%!</p>
+                </div>
+                <div class="p-6">
+                    <p id="quiz-question" class="font-bold text-slate-800 dark:text-white mb-6">...</p>
+                    <div id="quiz-options" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="walking-mode-modal" class="fixed inset-0 bg-slate-900 z-[90] hidden flex flex-col">
+            <div class="bg-slate-800 p-4 text-white flex justify-between items-center shadow-lg shrink-0 border-b border-slate-700">
+                <div><h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-person-walking text-blue-400"></i> <span data-i18n="Διαδραστικός Χάρτης">Live Map</span></h2></div>
+                <button onclick="app.closeWalkingMode()" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-xs font-bold border border-white/10 transition" data-i18n="Ακύρωση">ΕΠΙΣΤΡΟΦΗ</button>
+            </div>
+            <div class="flex-1 relative bg-slate-100 dark:bg-slate-900 overflow-hidden flex flex-col md:flex-row">
+                <div id="leaflet-map" class="flex-1 relative bg-slate-200 dark:bg-slate-800 h-1/2 md:h-full z-0"></div>
+                <div class="w-full md:w-80 bg-white dark:bg-slate-800 shadow-xl z-10 flex flex-col h-1/2 md:h-full">
+                    <div class="p-4 bg-blue-600 text-white"><h3 class="font-bold text-lg" id="wm-stop-name">Ακρόπολη</h3></div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3 dark:text-white" id="wm-poi-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="product-modal" class="fixed inset-0 bg-slate-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 relative">
+                <button onclick="document.getElementById('product-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+                <h3 id="pm-title" class="text-xl font-bold mb-1 dark:text-white">Prod</h3>
+                <p id="pm-price" class="text-sm text-blue-600 font-bold mb-4">0€</p>
+                <div class="mb-4"><label class="text-xs font-bold uppercase dark:text-slate-400" data-i18n="Επιλογές">Επιλογές</label><div id="pm-options" class="space-y-2 mt-2 max-h-40 overflow-y-auto"></div></div>
+                <button onclick="app.confirmProductAdd()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl" data-i18n="Προσθήκη στο Καλάθι">Προσθήκη στο Καλάθι</button>
+            </div>
+        </div>
+
+        <div id="pickup-modal" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
+                <h3 class="text-lg font-bold text-center mb-4 dark:text-white" data-i18n="Επιλογή Στάσης Παραλαβής">Επιλογή Στάσης Παραλαβής</h3>
+                <div id="pickup-options" class="space-y-2 mb-4 max-h-60 overflow-y-auto"></div>
+                <button onclick="document.getElementById('pickup-modal').classList.add('hidden')" class="w-full bg-slate-100 dark:bg-slate-700 py-2 rounded-xl text-sm font-bold text-slate-500 dark:text-white" data-i18n="Ακύρωση">Ακύρωση</button>
+            </div>
+        </div>
+
+        <div id="pay-modal" class="fixed inset-0 bg-slate-900/60 z-[75] hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-pop">
+                <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold dark:text-white" data-i18n="Πληρωμή με Κάρτα">Πληρωμή</h3><i class="fa-brands fa-cc-visa text-3xl text-blue-600"></i></div>
+                <div class="space-y-3">
+                    <div><label class="text-xs font-bold text-slate-500 uppercase" data-i18n="Αριθμος Καρτας">Αριθμος</label><input type="text" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 font-mono" disabled value="**** **** **** 4242"></div>
+                    <div class="flex gap-2">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase" data-i18n="HΜ. ΛΗΞΗΣ">ΛΗΞΗ</label><input type="text" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 font-mono" disabled value="12/28"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase" data-i18n="CVC">CVC</label><input type="text" class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2 font-mono" disabled value="***"></div>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-2">
+                    <button onclick="document.getElementById('pay-modal').classList.add('hidden')" class="flex-1 bg-slate-100 dark:bg-slate-700 py-2 rounded-xl text-sm font-bold text-slate-500 dark:text-white" data-i18n="Ακύρωση">Ακύρωση</button>
+                    <button onclick="app.processPayment()" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2"><i class="fa-solid fa-lock"></i> <span data-i18n="Ολοκλήρωση"></span> <span id="pay-amount"></span></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="help-modal" class="fixed inset-0 bg-slate-900/60 z-[110] hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4 relative max-h-[80vh] overflow-y-auto">
+                <button onclick="document.getElementById('help-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 dark:hover:text-white"><i class="fa-solid fa-xmark fa-xl"></i></button>
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2 dark:text-white"><i class="fa-solid fa-circle-info text-blue-600"></i> Οδηγίες</h2>
+                <div class="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+                    <div><h3 class="font-bold text-slate-800 dark:text-white">1. Περιήγηση & Θέα</h3><p>Δείτε τη διαδρομή. Χρησιμοποιήστε το AR για πληροφορίες.</p></div>
+                    <div><h3 class="font-bold text-slate-800 dark:text-white">2. Παραγγελίες</h3><p>Επιλέξτε φαγητό. Η παραγγελία θα έρθει στη θέση σας.</p></div>
+                    <div><h3 class="font-bold text-slate-800 dark:text-white">3. Εκπτώσεις Trivia</h3><p>Απαντήστε σωστά στις στάσεις και κερδίστε -10%!</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.error(e)); });
+        }
+    </script>
+</body>
+</html>
